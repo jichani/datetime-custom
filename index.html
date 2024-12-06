@@ -84,7 +84,7 @@
             .close-button {
                 background: none;
                 border: none;
-                font-size: 1.5em;
+                font-size: 1.6em;
                 cursor: pointer;
                 padding: 0;
             }
@@ -116,6 +116,8 @@
                 border: none;
                 cursor: pointer;
                 padding: 5px 10px;
+                font-weight: 600;
+                font-size: 14px;
             }
 
             .calendar-grid {
@@ -211,7 +213,7 @@
             .confirm-button {
                 width: 100%;
                 padding: 10px;
-                background-color: #007bff;
+                background-color: #0056b3;
                 color: white;
                 border: none;
                 border-radius: 4px;
@@ -225,13 +227,14 @@
             @media (max-width: 768px) {
                 .picker-container {
                     flex-direction: column;
+                    gap: 10px;
                 }
 
                 .time-selector {
                     border-left: none;
                     border-top: 1px solid #eee;
                     padding-left: 0;
-                    padding-top: 20px;
+                    padding-top: 10px;
                 }
 
                 .hour-list {
@@ -239,11 +242,15 @@
                 }
 
                 .calendar-grid .date-cell {
-                    padding: 12px 8px;
+                    padding: 8px 8px;
                 }
 
                 .datetime-picker {
                     padding: 0;
+                }
+
+                .weekday {
+                    margin-bottom: 5px;
                 }
             }
 
@@ -279,6 +286,11 @@
                         readonly
                         placeholder="날짜와 시간을 선택하세요"
                     />
+                    <input
+                        type="hidden"
+                        id="start-date-formatted"
+                        name="start_date"
+                    />
                 </div>
             </div>
 
@@ -294,11 +306,16 @@
                         readonly
                         placeholder="날짜와 시간을 선택하세요"
                     />
+                    <input
+                        type="hidden"
+                        id="end-date-formatted"
+                        name="end_date"
+                    />
                 </div>
             </div>
 
             <div class="datetime-input-group">
-                <label>예약 일시</label>
+                <label>설치 일시</label>
                 <div class="input-wrapper">
                     <input
                         type="text"
@@ -309,11 +326,16 @@
                         readonly
                         placeholder="날짜와 시간을 선택하세요"
                     />
+                    <input
+                        type="hidden"
+                        id="reservation-date-formatted"
+                        name="reservation_date"
+                    />
                 </div>
             </div>
 
             <div class="datetime-input-group">
-                <label>알림 일시</label>
+                <label>철거 일시</label>
                 <div class="input-wrapper">
                     <input
                         type="text"
@@ -323,6 +345,11 @@
                         data-min-date="today"
                         readonly
                         placeholder="날짜와 시간을 선택하세요"
+                    />
+                    <input
+                        type="hidden"
+                        id="notification-date-formatted"
+                        name="notification_date"
                     />
                 </div>
             </div>
@@ -334,10 +361,14 @@
                     this.input = input;
                     this.selectedDate = new Date();
                     this.currentDate = new Date();
-                    this.selectedHour = this.selectedDate.getHours();
+                    this.selectedHour = 0;
                     this.minDate = this.getMinDate();
+                    this.touchStartX = 0;
+                    this.hiddenInput = this.input.nextElementSibling;
 
                     this.handleEscKey = this.handleEscKey.bind(this);
+                    this.handleTouchStart = this.handleTouchStart.bind(this);
+                    this.handleTouchEnd = this.handleTouchEnd.bind(this);
                     this.init();
                 }
 
@@ -359,9 +390,40 @@
                     return null;
                 }
 
+                getFormattedDateTime() {
+                    const year = this.selectedDate.getFullYear();
+                    const month = String(
+                        this.selectedDate.getMonth() + 1
+                    ).padStart(2, '0');
+                    const day = String(this.selectedDate.getDate()).padStart(
+                        2,
+                        '0'
+                    );
+                    const hour = String(this.selectedHour).padStart(2, '0');
+
+                    return `${year}-${month}-${day}T${hour}:00`;
+                }
+
                 handleEscKey(e) {
                     if (e.key === 'Escape') {
                         this.closeModal();
+                    }
+                }
+
+                handleTouchStart(e) {
+                    this.touchStartX = e.touches[0].clientX;
+                }
+
+                handleTouchEnd(e) {
+                    const touchEndX = e.changedTouches[0].clientX;
+                    const diffX = touchEndX - this.touchStartX;
+
+                    if (Math.abs(diffX) > 50) {
+                        if (diffX > 0) {
+                            this.changeMonth(-1);
+                        } else {
+                            this.changeMonth(1);
+                        }
                     }
                 }
 
@@ -379,9 +441,17 @@
                        <div class="picker-container">
                            <div class="calendar-container">
                                <div class="calendar-header">
-                                   <button class="prev-month">&lt;</button>
+                                   <button class="prev-month">
+                                       <svg width="11" height="11" viewBox="0 0 11 11" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                           <path d="M5.52951 10.5123C5.38889 10.6528 5.19826 10.7317 4.99951 10.7317C4.80076 10.7317 4.61014 10.6528 4.46951 10.5123L0.219512 6.26235C0.0790619 6.12172 0.000172081 5.9311 0.000172098 5.73235C0.000172116 5.5336 0.079062 5.34297 0.219512 5.20235L4.46951 0.952349C4.61166 0.819707 4.79976 0.747446 4.99415 0.750804C5.18854 0.754162 5.37403 0.832876 5.51151 0.970349C5.64899 1.10783 5.7277 1.29332 5.73106 1.48771C5.73442 1.6821 5.66215 1.8702 5.52951 2.01235L2.55951 4.98235L9.99951 4.98235C10.1984 4.98235 10.3892 5.06137 10.5298 5.20202C10.6705 5.34267 10.7495 5.53344 10.7495 5.73235C10.7495 5.93126 10.6705 6.12203 10.5298 6.26268C10.3892 6.40333 10.1984 6.48235 9.99951 6.48235L2.55951 6.48235L5.52951 9.45235C5.66996 9.59297 5.74885 9.7836 5.74885 9.98235C5.74885 10.1811 5.66996 10.3717 5.52951 10.5123Z" fill="black"/>
+                                       </svg>
+                                   </button>
                                    <span class="current-month">2024년 2월</span>
-                                   <button class="next-month">&gt;</button>
+                                   <button class="next-month">
+                                       <svg width="11" height="11" viewBox="0 0 11 11" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                           <path d="M5.22 0.970073C5.36063 0.829622 5.55125 0.750732 5.75 0.750732C5.94875 0.750732 6.13937 0.829622 6.28 0.970073L10.53 5.22007C10.6705 5.3607 10.7493 5.55132 10.7493 5.75007C10.7493 5.94882 10.6705 6.13945 10.53 6.28007L6.28 10.5301C6.13785 10.6627 5.94975 10.735 5.75536 10.7316C5.56097 10.7283 5.37548 10.6495 5.238 10.5121C5.10053 10.3746 5.02181 10.1891 5.01846 9.99471C5.0151 9.80032 5.08736 9.61222 5.22 9.47007L8.19 6.50007H0.75C0.551088 6.50007 0.360322 6.42105 0.21967 6.2804C0.0790175 6.13975 0 5.94898 0 5.75007C0 5.55116 0.0790175 5.36039 0.21967 5.21974C0.360322 5.07909 0.551088 5.00007 0.75 5.00007H8.19L5.22 2.03007C5.07955 1.88945 5.00066 1.69882 5.00066 1.50007C5.00066 1.30132 5.07955 1.1107 5.22 0.970073Z" fill="black"/>
+                                       </svg>
+                                   </button>
                                </div>
                                <div class="calendar-grid">
                                    <div class="weekday sunday">일</div>
@@ -396,7 +466,7 @@
 
                            <div class="time-selector">
                                <div class="hour-selector">
-                                   <label>시간</label>
+                                   <label>시간(Hour)</label>
                                    <div class="hour-list"></div>
                                </div>
                            </div>
@@ -426,6 +496,9 @@
                         this.modal.querySelector('.current-month');
                     this.confirmBtn =
                         this.modal.querySelector('.confirm-button');
+                    this.calendarContainer = this.modal.querySelector(
+                        '.calendar-container'
+                    );
                 }
 
                 setupEventListeners() {
@@ -447,12 +520,21 @@
                     this.confirmBtn.addEventListener('click', () =>
                         this.confirmSelection()
                     );
+
+                    this.calendarContainer.addEventListener(
+                        'touchstart',
+                        this.handleTouchStart
+                    );
+                    this.calendarContainer.addEventListener(
+                        'touchend',
+                        this.handleTouchEnd
+                    );
                 }
 
                 openModal() {
-                    const currentValue = this.input.value;
+                    const currentValue = this.hiddenInput?.value;
                     if (currentValue) {
-                        const date = new Date(currentValue.replace('시', ''));
+                        const date = new Date(currentValue);
                         if (!isNaN(date)) {
                             this.selectedDate = date;
                             this.currentDate = new Date(date);
@@ -464,14 +546,12 @@
 
                     this.modal.style.display = 'flex';
                     document.body.style.overflow = 'hidden';
-                    // ESC 키 이벤트 추가
                     document.addEventListener('keydown', this.handleEscKey);
                 }
 
                 closeModal() {
                     this.modal.style.display = 'none';
                     document.body.style.overflow = '';
-                    // ESC 키 이벤트 제거
                     document.removeEventListener('keydown', this.handleEscKey);
                 }
 
@@ -625,6 +705,11 @@
                         .toString()
                         .padStart(2, '0')}시`;
                     this.input.value = `${formattedDate} ${formattedTime}`;
+
+                    // hidden input 업데이트
+                    if (this.hiddenInput) {
+                        this.hiddenInput.value = this.getFormattedDateTime();
+                    }
                 }
 
                 confirmSelection() {
