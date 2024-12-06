@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html lang="ko">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>DateTime Picker</title>
+        <style>
+            body {
+                font-family: Arial, sans-serif;
+                margin: 0;
+                padding: 20px;
+            }
+
+            .datetime-inputs {
+                display: flex;
+                flex-direction: column;
+                gap: 20px;
+                margin-bottom: 20px;
+            }
+
+            .datetime-input-group {
+                display: flex;
+                flex-direction: column;
+                gap: 5px;
+            }
+
+            .datetime-input-group label {
+                font-weight: bold;
+            }
+
+            .input-wrapper {
+                position: relative;
+                max-width: 300px;
+            }
+
+            .datetime-input {
+                width: 100%;
+                padding: 8px;
+                border: 1px solid #ddd;
+                border-radius: 4px;
+                cursor: pointer;
+            }
+
+            .modal-overlay {
+                display: none;
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: rgba(0, 0, 0, 0.5);
+                align-items: center;
+                justify-content: center;
+                z-index: 1000;
+            }
+
+            .datetime-picker {
+                background: white;
+                display: flex;
+                flex-direction: column;
+                max-width: 90%;
+                width: 600px;
+                max-height: 90vh;
+                border-radius: 8px;
+                box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            }
+
+            .picker-header {
+                position: sticky;
+                top: 0;
+                z-index: 2;
+                padding: 15px 20px;
+                border-bottom: 1px solid #eee;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }
+
+            .picker-title {
+                font-size: 1.2em;
+                font-weight: bold;
+            }
+
+            .close-button {
+                background: none;
+                border: none;
+                font-size: 1.5em;
+                cursor: pointer;
+                padding: 0;
+            }
+
+            .picker-body {
+                flex: 1;
+                overflow-y: auto;
+                padding: 20px;
+            }
+
+            .picker-container {
+                display: flex;
+                gap: 20px;
+            }
+
+            .calendar-container {
+                flex: 2;
+            }
+
+            .calendar-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 15px;
+            }
+
+            .calendar-header button {
+                background: none;
+                border: none;
+                cursor: pointer;
+                padding: 5px 10px;
+            }
+
+            .calendar-grid {
+                display: grid;
+                grid-template-columns: repeat(7, 1fr);
+                gap: 5px;
+                text-align: center;
+            }
+
+            .weekday {
+                font-weight: bold;
+                padding: 5px;
+                margin-bottom: 10px;
+            }
+
+            .date-cell {
+                padding: 8px;
+                cursor: pointer;
+                border-radius: 4px;
+            }
+
+            .date-cell:hover {
+                background-color: #f0f0f0;
+            }
+
+            .date-cell.selected {
+                background-color: #007bff;
+                color: white !important;
+            }
+
+            .date-cell.disabled {
+                opacity: 0.5;
+                cursor: not-allowed;
+                color: #ccc !important;
+            }
+
+            .date-cell.disabled:hover {
+                background-color: transparent;
+            }
+
+            .sunday {
+                color: red;
+            }
+            .saturday {
+                color: blue;
+            }
+
+            .time-selector {
+                flex: 1;
+                border-left: 1px solid #eee;
+                padding-left: 20px;
+            }
+
+            .hour-selector {
+                display: flex;
+                flex-direction: column;
+            }
+
+            .hour-selector label {
+                font-weight: bold;
+                margin-bottom: 10px;
+            }
+
+            .hour-list {
+                height: 300px;
+                overflow-y: auto;
+                border: 1px solid #ddd;
+                border-radius: 4px;
+            }
+
+            .hour-cell {
+                padding: 8px;
+                text-align: center;
+                cursor: pointer;
+            }
+
+            .hour-cell:hover {
+                background-color: #f0f0f0;
+            }
+
+            .hour-cell.selected {
+                background-color: #007bff;
+                color: white;
+            }
+
+            .confirm-button-container {
+                position: sticky;
+                bottom: 0;
+                padding: 15px 20px;
+                border-top: 1px solid #eee;
+            }
+
+            .confirm-button {
+                width: 100%;
+                padding: 10px;
+                background-color: #007bff;
+                color: white;
+                border: none;
+                border-radius: 4px;
+                cursor: pointer;
+            }
+
+            .confirm-button:hover {
+                background-color: #0056b3;
+            }
+
+            @media (max-width: 768px) {
+                .picker-container {
+                    flex-direction: column;
+                }
+
+                .time-selector {
+                    border-left: none;
+                    border-top: 1px solid #eee;
+                    padding-left: 0;
+                    padding-top: 20px;
+                }
+
+                .hour-list {
+                    height: 200px;
+                }
+
+                .calendar-grid .date-cell {
+                    padding: 12px 8px;
+                }
+
+                .datetime-picker {
+                    padding: 0;
+                }
+            }
+
+            @media (max-width: 480px) {
+                .modal-overlay {
+                    padding: 0;
+                }
+
+                .datetime-picker {
+                    width: 100%;
+                    height: 90vh;
+                    max-height: 100vh;
+                    border: none;
+                }
+
+                .picker-body {
+                    padding: 15px;
+                }
+            }
+        </style>
+    </head>
+    <body>
+        <div class="datetime-inputs">
+            <div class="datetime-input-group">
+                <label>시작 일시</label>
+                <div class="input-wrapper">
+                    <input
+                        type="text"
+                        id="start-date"
+                        class="datetime-input"
+                        data-picker="datetime"
+                        data-min-date="today"
+                        readonly
+                        placeholder="날짜와 시간을 선택하세요"
+                    />
+                </div>
+            </div>
+
+            <div class="datetime-input-group">
+                <label>종료 일시</label>
+                <div class="input-wrapper">
+                    <input
+                        type="text"
+                        id="end-date"
+                        class="datetime-input"
+                        data-picker="datetime"
+                        data-min-date="today"
+                        readonly
+                        placeholder="날짜와 시간을 선택하세요"
+                    />
+                </div>
+            </div>
+
+            <div class="datetime-input-group">
+                <label>예약 일시</label>
+                <div class="input-wrapper">
+                    <input
+                        type="text"
+                        id="reservation-date"
+                        class="datetime-input"
+                        data-picker="datetime"
+                        data-min-date="today"
+                        readonly
+                        placeholder="날짜와 시간을 선택하세요"
+                    />
+                </div>
+            </div>
+
+            <div class="datetime-input-group">
+                <label>알림 일시</label>
+                <div class="input-wrapper">
+                    <input
+                        type="text"
+                        id="notification-date"
+                        class="datetime-input"
+                        data-picker="datetime"
+                        data-min-date="today"
+                        readonly
+                        placeholder="날짜와 시간을 선택하세요"
+                    />
+                </div>
+            </div>
+        </div>
+
+        <script>
+            class DateTimePicker {
+                constructor(input) {
+                    this.input = input;
+                    this.selectedDate = new Date();
+                    this.currentDate = new Date();
+                    this.selectedHour = this.selectedDate.getHours();
+                    this.minDate = this.getMinDate();
+
+                    this.handleEscKey = this.handleEscKey.bind(this);
+                    this.init();
+                }
+
+                init() {
+                    this.createModal();
+                    this.initElements();
+                    this.setupEventListeners();
+                    this.renderCalendar();
+                    this.renderHourPicker();
+                }
+
+                getMinDate() {
+                    const minDate = this.input.dataset.minDate;
+                    if (minDate === 'today') {
+                        const today = new Date();
+                        today.setHours(0, 0, 0, 0);
+                        return today;
+                    }
+                    return null;
+                }
+
+                handleEscKey(e) {
+                    if (e.key === 'Escape') {
+                        this.closeModal();
+                    }
+                }
+
+                createModal() {
+                    const modalId = `modal-${this.input.id}`;
+                    const modalHtml = `
+           <div class="modal-overlay" id="${modalId}">
+               <div class="datetime-picker">
+                   <div class="picker-header">
+                       <div class="picker-title">날짜 및 시간 선택</div>
+                       <button class="close-button">&times;</button>
+                   </div>
+                   
+                   <div class="picker-body">
+                       <div class="picker-container">
+                           <div class="calendar-container">
+                               <div class="calendar-header">
+                                   <button class="prev-month">&lt;</button>
+                                   <span class="current-month">2024년 2월</span>
+                                   <button class="next-month">&gt;</button>
+                               </div>
+                               <div class="calendar-grid">
+                                   <div class="weekday sunday">일</div>
+                                   <div class="weekday">월</div>
+                                   <div class="weekday">화</div>
+                                   <div class="weekday">수</div>
+                                   <div class="weekday">목</div>
+                                   <div class="weekday">금</div>
+                                   <div class="weekday saturday">토</div>
+                               </div>
+                           </div>
+
+                           <div class="time-selector">
+                               <div class="hour-selector">
+                                   <label>시간</label>
+                                   <div class="hour-list"></div>
+                               </div>
+                           </div>
+                       </div>
+                   </div>
+
+                   <div class="confirm-button-container">
+                       <button class="confirm-button">확인</button>
+                   </div>
+               </div>
+           </div>
+       `;
+
+                    document.body.insertAdjacentHTML('beforeend', modalHtml);
+                    this.modal = document.getElementById(modalId);
+                }
+
+                initElements() {
+                    this.closeButton =
+                        this.modal.querySelector('.close-button');
+                    this.calendarGrid =
+                        this.modal.querySelector('.calendar-grid');
+                    this.hourList = this.modal.querySelector('.hour-list');
+                    this.prevMonthBtn = this.modal.querySelector('.prev-month');
+                    this.nextMonthBtn = this.modal.querySelector('.next-month');
+                    this.currentMonthDisplay =
+                        this.modal.querySelector('.current-month');
+                    this.confirmBtn =
+                        this.modal.querySelector('.confirm-button');
+                }
+
+                setupEventListeners() {
+                    this.input.addEventListener('click', () =>
+                        this.openModal()
+                    );
+                    this.closeButton.addEventListener('click', () =>
+                        this.closeModal()
+                    );
+                    this.modal.addEventListener('click', (e) => {
+                        if (e.target === this.modal) this.closeModal();
+                    });
+                    this.prevMonthBtn.addEventListener('click', () =>
+                        this.changeMonth(-1)
+                    );
+                    this.nextMonthBtn.addEventListener('click', () =>
+                        this.changeMonth(1)
+                    );
+                    this.confirmBtn.addEventListener('click', () =>
+                        this.confirmSelection()
+                    );
+                }
+
+                openModal() {
+                    const currentValue = this.input.value;
+                    if (currentValue) {
+                        const date = new Date(currentValue.replace('시', ''));
+                        if (!isNaN(date)) {
+                            this.selectedDate = date;
+                            this.currentDate = new Date(date);
+                            this.selectedHour = date.getHours();
+                            this.renderCalendar();
+                            this.renderHourPicker();
+                        }
+                    }
+
+                    this.modal.style.display = 'flex';
+                    document.body.style.overflow = 'hidden';
+                    // ESC 키 이벤트 추가
+                    document.addEventListener('keydown', this.handleEscKey);
+                }
+
+                closeModal() {
+                    this.modal.style.display = 'none';
+                    document.body.style.overflow = '';
+                    // ESC 키 이벤트 제거
+                    document.removeEventListener('keydown', this.handleEscKey);
+                }
+
+                isDateSelectable(date) {
+                    if (!this.minDate) return true;
+
+                    const compareDate = new Date(
+                        date.getFullYear(),
+                        date.getMonth(),
+                        date.getDate()
+                    );
+                    return compareDate >= this.minDate;
+                }
+
+                renderCalendar() {
+                    const year = this.currentDate.getFullYear();
+                    const month = this.currentDate.getMonth();
+
+                    this.currentMonthDisplay.textContent = `${year}년 ${
+                        month + 1
+                    }월`;
+
+                    const weekdayCells = Array.from(
+                        this.calendarGrid.getElementsByClassName('weekday')
+                    );
+                    this.calendarGrid.innerHTML = '';
+                    weekdayCells.forEach((cell) =>
+                        this.calendarGrid.appendChild(cell)
+                    );
+
+                    const firstDay = new Date(year, month, 1).getDay();
+                    const lastDate = new Date(year, month + 1, 0).getDate();
+
+                    for (let i = 0; i < firstDay; i++) {
+                        const emptyCell = document.createElement('div');
+                        emptyCell.className = 'date-cell empty';
+                        this.calendarGrid.appendChild(emptyCell);
+                    }
+
+                    for (let date = 1; date <= lastDate; date++) {
+                        const cell = document.createElement('div');
+                        cell.className = 'date-cell';
+                        cell.textContent = date;
+
+                        const currentDate = new Date(year, month, date);
+                        const isSelectable = this.isDateSelectable(currentDate);
+
+                        if (!isSelectable) {
+                            cell.classList.add('disabled');
+                        } else {
+                            const dayOfWeek = (firstDay + date - 1) % 7;
+                            if (dayOfWeek === 0) cell.classList.add('sunday');
+                            if (dayOfWeek === 6) cell.classList.add('saturday');
+
+                            if (
+                                this.selectedDate.getFullYear() === year &&
+                                this.selectedDate.getMonth() === month &&
+                                this.selectedDate.getDate() === date
+                            ) {
+                                cell.classList.add('selected');
+                            }
+
+                            cell.addEventListener('click', () =>
+                                this.selectDate(date)
+                            );
+                        }
+
+                        this.calendarGrid.appendChild(cell);
+                    }
+                }
+
+                renderHourPicker() {
+                    this.hourList.innerHTML = '';
+                    for (let hour = 0; hour < 24; hour++) {
+                        const hourCell = document.createElement('div');
+                        hourCell.className = 'hour-cell';
+                        hourCell.textContent = hour.toString().padStart(2, '0');
+
+                        if (this.selectedHour === hour) {
+                            hourCell.classList.add('selected');
+                        }
+
+                        hourCell.addEventListener('click', () =>
+                            this.selectHour(hour)
+                        );
+                        this.hourList.appendChild(hourCell);
+                    }
+                }
+
+                selectDate(date) {
+                    const selectedDate = new Date(
+                        this.currentDate.getFullYear(),
+                        this.currentDate.getMonth(),
+                        date,
+                        this.selectedHour
+                    );
+
+                    if (!this.isDateSelectable(selectedDate)) return;
+
+                    const cells =
+                        this.calendarGrid.getElementsByClassName('date-cell');
+                    Array.from(cells).forEach((cell) =>
+                        cell.classList.remove('selected')
+                    );
+
+                    const selectedCell = Array.from(cells).find(
+                        (cell) =>
+                            !cell.classList.contains('empty') &&
+                            parseInt(cell.textContent) === date
+                    );
+
+                    if (selectedCell) {
+                        selectedCell.classList.add('selected');
+                        this.selectedDate = selectedDate;
+                    }
+                }
+
+                selectHour(hour) {
+                    const cells =
+                        this.hourList.getElementsByClassName('hour-cell');
+                    Array.from(cells).forEach((cell) =>
+                        cell.classList.remove('selected')
+                    );
+                    const hourCell = cells[hour];
+                    if (hourCell) {
+                        hourCell.classList.add('selected');
+                    }
+                    this.selectedHour = hour;
+                    this.selectedDate.setHours(hour);
+                }
+
+                changeMonth(offset) {
+                    this.currentDate.setMonth(
+                        this.currentDate.getMonth() + offset
+                    );
+                    this.renderCalendar();
+                }
+
+                updateDisplay() {
+                    const formattedDate = this.selectedDate.toLocaleDateString(
+                        'ko-KR',
+                        {
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric',
+                            weekday: 'long',
+                        }
+                    );
+
+                    const formattedTime = `${this.selectedHour
+                        .toString()
+                        .padStart(2, '0')}시`;
+                    this.input.value = `${formattedDate} ${formattedTime}`;
+                }
+
+                confirmSelection() {
+                    this.selectedDate.setHours(this.selectedHour, 0, 0);
+                    this.updateDisplay();
+                    this.closeModal();
+                }
+            }
+
+            document.addEventListener('DOMContentLoaded', () => {
+                const inputs = document.querySelectorAll(
+                    'input[data-picker="datetime"]'
+                );
+                inputs.forEach((input) => {
+                    new DateTimePicker(input);
+                });
+            });
+        </script>
+    </body>
+</html>
