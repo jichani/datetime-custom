@@ -278,7 +278,7 @@
                 <label>시작 일시</label>
                 <div class="input-wrapper">
                     <input
-                        type="datetime-local"
+                        type="date"
                         id="start-date"
                         class="datetime-input"
                         placeholder="날짜와 시간을 선택하세요"
@@ -290,7 +290,7 @@
                 <label>종료 일시</label>
                 <div class="input-wrapper">
                     <input
-                        type="datetime-local"
+                        type="date"
                         id="end-date"
                         class="datetime-input"
                         placeholder="날짜와 시간을 선택하세요"
@@ -373,65 +373,8 @@
                     this.createModal();
                     this.initElements();
                     this.setupEventListeners();
-                    this.setInitialValue();
                     this.renderCalendar();
                     this.renderHourPicker();
-                }
-
-                setInitialValue() {
-                    if (this.defaultFromId) {
-                        const defaultInput = document.getElementById(
-                            this.defaultFromId
-                        );
-                        if (defaultInput && defaultInput.value) {
-                            const date = new Date(defaultInput.value);
-                            if (!isNaN(date)) {
-                                // 날짜만 가져오고 시간은 defaultHour로 설정
-                                this.selectedDate = new Date(
-                                    date.getFullYear(),
-                                    date.getMonth(),
-                                    date.getDate(),
-                                    this.defaultHour,
-                                    0,
-                                    0
-                                );
-                                this.currentDate = new Date(this.selectedDate);
-                                this.selectedHour = this.defaultHour;
-
-                                // hidden input과 표시용 input 업데이트
-                                this.updateDisplay();
-                            }
-                        }
-
-                        // 참조하는 input의 값이 변경될 때 이 input도 업데이트
-                        defaultInput.addEventListener('change', () => {
-                            if (defaultInput.value) {
-                                const date = new Date(defaultInput.value);
-                                if (!isNaN(date)) {
-                                    // 날짜만 가져오고 시간은 defaultHour로 설정
-                                    this.selectedDate = new Date(
-                                        date.getFullYear(),
-                                        date.getMonth(),
-                                        date.getDate(),
-                                        this.defaultHour,
-                                        0,
-                                        0
-                                    );
-                                    this.currentDate = new Date(
-                                        this.selectedDate
-                                    );
-                                    this.selectedHour = this.defaultHour;
-                                    this.updateDisplay();
-                                }
-                            } else {
-                                // 참조하는 input이 비워지면 이 input도 초기화
-                                this.input.value = '';
-                                if (this.hiddenInput) {
-                                    this.hiddenInput.value = '';
-                                }
-                            }
-                        });
-                    }
                 }
 
                 isDateString(str) {
@@ -685,33 +628,53 @@
                 openModal() {
                     if (!this.validateDateSelection()) return;
 
-                    const currentValue = this.hiddenInput?.value;
-                    if (currentValue) {
-                        const date = new Date(currentValue);
-                        if (!isNaN(date)) {
-                            this.selectedDate = date;
-                            this.currentDate = new Date(date);
-                            const hour = date.getHours();
-                            this.selectedHour =
-                                hour < this.minHour || hour > this.maxHour
-                                    ? this.minHour
-                                    : hour;
-                            this.renderCalendar();
-                            this.renderHourPicker();
+                    // defaultFrom 값이 있다면 해당 값으로 초기화
+                    if (this.defaultFromId) {
+                        const defaultInput = document.getElementById(
+                            this.defaultFromId
+                        );
+                        if (defaultInput && defaultInput.value) {
+                            const date = new Date(defaultInput.value);
+                            if (!isNaN(date)) {
+                                this.selectedDate = new Date(
+                                    date.getFullYear(),
+                                    date.getMonth(),
+                                    date.getDate(),
+                                    this.defaultHour,
+                                    0,
+                                    0
+                                );
+                                this.currentDate = new Date(this.selectedDate);
+                                this.selectedHour = this.defaultHour;
+                            }
                         }
                     } else {
-                        // 초기값 설정
-                        const minDate = this.getMinDate();
-                        if (minDate) {
-                            this.selectedDate = new Date(minDate);
-                            this.currentDate = new Date(minDate);
+                        const currentValue = this.hiddenInput?.value;
+                        if (currentValue) {
+                            const date = new Date(currentValue);
+                            if (!isNaN(date)) {
+                                this.selectedDate = date;
+                                this.currentDate = new Date(date);
+                                const hour = date.getHours();
+                                this.selectedHour =
+                                    hour < this.minHour || hour > this.maxHour
+                                        ? this.minHour
+                                        : hour;
+                            }
+                        } else {
+                            // 초기값 설정
+                            const minDate = this.getMinDate();
+                            if (minDate) {
+                                this.selectedDate = new Date(minDate);
+                                this.currentDate = new Date(minDate);
+                            }
+                            this.selectedHour = this.defaultHour;
+                            this.selectedDate.setHours(this.defaultHour);
                         }
-                        this.selectedHour = this.minHour;
-                        this.selectedDate.setHours(this.minHour);
-                        this.renderCalendar();
-                        this.renderHourPicker();
                     }
 
+                    this.renderCalendar();
+                    this.renderHourPicker();
                     this.modal.style.display = 'flex';
                     document.body.style.overflow = 'hidden';
                     document.addEventListener('keydown', this.handleEscKey);
